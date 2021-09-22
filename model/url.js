@@ -7,7 +7,7 @@ const Schema = mongoose.Schema;
 
 const urlSchema = new Schema({
     original : {type : String, required: true}, 
-    short : Number  
+    short : {type : Number}  
 })
 
 let url = mongoose.model("url", urlSchema);

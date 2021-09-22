@@ -31,34 +31,61 @@ app.get('/api/hello', function(req, res) {
 
 
 let responceObject = {}
+
 app.post("/api/shorturl", bodyParser.urlencoded({extended: false}) , (req, res)=>{
   let inputUrl = req.body['url']
   responceObject['original_url'] = inputUrl
   let inputShort = 1
-
-  url.findOne({})
-      .sort({sort: 'desc'})
+  let regex = /^(ftp|http|https):\/\/[^ "]+$/;
+  if (regex.test(inputUrl) == false) {
+    res.json({ error: 'invalid url'})
+  }else{
+    url.findOne({})
+      .sort({short: -1})
       .exec( (err, data)=>{
-        if (!err && data != undefined){
-          inputShort = data.short +1 
+        if (!err && data != null){
+          inputShort = data.short + 1 ;
         }
         if(!err){
-          url.findOneAndUpdate(
-            {original: inputUrl},
-            {original: inputUrl, short: inputShort},
-            {new: true, upsert: true}, (err , saveUrl) =>{
+          url.findOne({original: inputUrl}, (err , urlPost) =>{
               if (err) {
                 return console.error(err);
               }else{
-                responceObject["short_url"] = saveUrl.short;
-                res.json(responceObject);
+                // console.log(urlPost)
+                if (urlPost == undefined){
+                  let newUrl = new url({original: inputUrl, short: inputShort})
+                  newUrl.save((err, data)=>{
+                    if(!err){
+                      res.json({original_url : data.original, short_url : data.short} )
+                    }
+                  })
+                }else{
+                  responceObject["short_url"] = urlPost.short;
+                  res.json(responceObject);
+                }
+
               }
             }
           )
         }
-      })
+    })
+  }
 })
 
+
+app.get('/api/shorturl/:urlShortNumb', (req, res)=>{
+  let urlShortNumb = req.params.urlShortNumb
+  url.findOne({short: urlShortNumb }, (err, data)=>{
+    if (err) return console.log(err);
+    if (data == null){
+      res.json({error: 'url doesn\'t exist'})
+    }else{
+      res.redirect(data.original)
+    }
+    
+  })
+
+})
 
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
